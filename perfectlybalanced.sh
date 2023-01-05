@@ -11,7 +11,7 @@ VERSION="0.0.10"
 
 FILENAME=$0
 
-MAX_FEE=50 # Sats
+MAX_PPM=10 # Sats
 
 TOLERANCE=0.95 # 95%
 
@@ -189,7 +189,7 @@ list () {
 }
 
 rebalance () {
-  echo -e "Trying to rebalance these ${#UNBALANCED[@]} unbalanced channels, max fee $MAX_FEE sats:\n"
+  echo -e "Trying to rebalance these ${#UNBALANCED[@]} unbalanced channels, max fee $MAX_PPM sats:\n"
   export GREP_COLORS='ms=01;31'
   headers
   for c in ${UNBALANCED[@]}; do
@@ -200,9 +200,9 @@ rebalance () {
   for v in ${UNBALANCED[@]}; do
     amount=`reb -l --show-only $v | grep "Rebalance amount:" | awk '{ printf $3 }' | sed 's/,//g'`
     if [[  `bc -l <<< "$amount < 0"` -eq 1 ]]; then
-      reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-limit $MAX_FEE --min-remote 0
+      reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
     elif [[ `bc -l <<< "$amount > 0"` -eq 1 ]]; then
-      reb -t $v --amount $amount --reckless --min-local 0 --min-amount 0 --fee-limit $MAX_FEE --min-remote 0
+      reb -t $v --amount $amount --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
     fi
   done
   echo -e "\nRebalance completed!\nPlease use '$FILENAME list' to see your perfectly rebalanced list :)\n"
@@ -212,13 +212,13 @@ rebalance () {
 for i in "$@"; do
   case "$i" in
   -m=*|--max-fee=*)
-    MAX_FEE="${i#*=}"
-    if ! [[ "$MAX_FEE" =~ ^[0-9]+$ ]]; then
-      echo -e "Error: the MAX_FEE value should be a positive number\n"
+    MAX_PPM="${i#*=}"
+    if ! [[ "$MAX_PPM" =~ ^[0-9]+$ ]]; then
+      echo -e "Error: the MAX_PPM value should be a positive number\n"
       exit 1
     fi
-    if [[ `bc -l <<< "$MAX_FEE <= 0"` -eq 1 ]]; then
-      echo -e "Error: the MAX_FEE value should be greater than 0\n"
+    if [[ `bc -l <<< "$MAX_PPM <= 0"` -eq 1 ]]; then
+      echo -e "Error: the MAX_PPM value should be greater than 0\n"
       exit 1
     fi
     shift
@@ -246,11 +246,11 @@ for i in "$@"; do
     echo -e "\t-h, --help\n\t\tShows this help\n"
     echo -e "\t-i=CHANNEL_ID, --ignore=CHANNEL_ID\n\t\tIgnores a specific channel id useful only if passed before 'list' or 'rebalance'"
     echo -e "\t\tIt can be used many times and should match a number of 18 digits\n"
-    echo -e "\t-m=MAX_FEE, --max-fee=MAX_FEE\n\t\t(Default: 50) Changes max fees useful only if passed before 'list' or 'rebalance'\n"
+    echo -e "\t-m=MAX_PPM, --max-fee=MAX_PPM\n\t\t(Default: 10) Changes max fees useful only if passed before 'list' or 'rebalance'\n"
     echo -e "\t-t=TOLERANCE, --tolerance=TOLERANCE\n\t\t(Default: 0.95) Changes tolerance useful only if passed before 'rebalance'\n"
     echo -e "list:\n\tShows a list of all channels in compacted mode using 'rebalance.py -c -l'"
     echo -e "\tfor example to: '$FILENAME --tolerance=0.99 list'\n"
-    echo -e "rebalance:\n\tTries to rebalance unbalanced channels with default max fee of 50 and tolerance 0.95"
+    echo -e "rebalance:\n\tTries to rebalance unbalanced channels with default max fee of 10 and tolerance 0.95"
     echo -e "\tfor example to: '$FILENAME --max-fee=10 --tolerance=0.98 rebalance'\n"
     exit
     ;;
