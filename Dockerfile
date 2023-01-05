@@ -10,4 +10,6 @@ RUN apk add --update --no-cache bash bc
 VOLUME [ "/root/.lnd", "/tmp" ]
 WORKDIR /perfectly-balanced
 
+ENV REBALANCE_LND_FILEPATH=/rebalance-lnd/rebalance.py
+
 ENTRYPOINT ["/perfectly-balanced/perfectlybalanced.sh"]
