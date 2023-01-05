@@ -2,16 +2,20 @@
 
 # Perfectly Balanced as all things should be
 # By Cuaritas 2021
+# By Michael Henke 2023
 # MIT License
+
+renice -n 19 $$
 
 # This script tries to get your channels perfectly balanced by using `rebalance.py`
 # See https://github.com/C-Otto/rebalance-lnd for more info
 
-VERSION="0.0.10"
+VERSION="0.0.12"
 
 FILENAME=$0
 
 MAX_PPM=10 # Sats
+THREADS=8
 
 TOLERANCE=0.95 # 95%
 
@@ -100,8 +104,10 @@ setup() {
 
 setup
 
+reb="$REBALANCE_LND_FILEPATH --grpc=${LND_IP}:${LND_GRPC_PORT} --lnddir=$LND_DIR"
+
 reb () {
-  python3 $REBALANCE_LND_FILEPATH --grpc=${LND_IP}:${LND_GRPC_PORT} --lnddir=$LND_DIR $@
+  python3 $reb $@
 }
 
 channels_file=`mktemp`
@@ -116,7 +122,6 @@ channels() {
 
 UNBALANCED=()
 IGNORE=()
-SHUFFLED=()
 
 headers() {
   echo -e "${Bo}Balance Graph  | Channel ID         | Oubound Cap | Inbound Cap | Channel Alias${W}"
@@ -190,7 +195,7 @@ list () {
 }
 
 rebalance () {
-  echo -e "Trying to rebalance these ${#UNBALANCED[@]} unbalanced channels, max fee $MAX_PPM sats:\n"
+  echo -e "Trying to rebalance these ${#UNBALANCED[@]} unbalanced channels, max fee rate $MAX_PPM ppm:\n"
   export GREP_COLORS='ms=01;31'
   headers
   for c in ${UNBALANCED[@]}; do
@@ -198,20 +203,42 @@ rebalance () {
     channels | grep --color=always $c
   done
   echo
-  for v in $(shuf -e "${UNBALANCED[@]}"); do
+
+  local COMMANDS=()
+
+  for v in ${UNBALANCED[@]}; do 
+    # this step will take a significant amount of time (~1sec+)
     amount=`reb -l --show-only $v | grep "Rebalance amount:" | awk '{ printf $3 }' | sed 's/,//g'`
     if [[  `bc -l <<< "$amount < 0"` -eq 1 ]]; then
-      reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
+      echo -n "<"
+      COMMANDS+=("python3 $reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0")
     elif [[ `bc -l <<< "$amount > 0"` -eq 1 ]]; then
-      reb -t $v --amount $amount --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
+      echo -n ">"
+      COMMANDS+=("python3 $reb -t $v --amount $amount --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0")
     fi
   done
+  echo
+
+  shuf -e "${COMMANDS[@]}" | xargs -P ${THREADS:-8} -I a sh -c a
+
   echo -e "\nRebalance completed!\nPlease use '$FILENAME list' to see your perfectly rebalanced list :)\n"
 }
 
 for i in "$@"; do
   case "$i" in
-  -m=*|--max-fee=*)
+  -n=*|--number-of-threads=*)
+    THREADS="${i#*=}"
+    if ! [[ "$THREADS" =~ ^[0-9]+$ ]]; then
+      echo -e "Error: the THREADS value should be a positive number\n"
+      exit 1
+    fi
+    if [[ `bc -l <<< "$THREADS <= 0"` -eq 1 ]]; then
+      echo -e "Error: the THREADS value should be greater than 0\n"
+      exit 1
+    fi
+    shift
+    ;;
+  -r=*|--max-fee-rate=*)
     MAX_PPM="${i#*=}"
     if ! [[ "$MAX_PPM" =~ ^[0-9]+$ ]]; then
       echo -e "Error: the MAX_PPM value should be a positive number\n"
@@ -246,8 +273,9 @@ for i in "$@"; do
     echo -e "\t-h, --help\n\t\tShows this help\n"
     echo -e "\t-i=CHANNEL_ID, --ignore=CHANNEL_ID\n\t\tIgnores a specific channel id useful only if passed before 'list' or 'rebalance'"
     echo -e "\t\tIt can be used many times and should match a number of 18 digits\n"
-    echo -e "\t-m=MAX_PPM, --max-fee=MAX_PPM\n\t\t(Default: 10) Changes max fees useful only if passed before 'list' or 'rebalance'\n"
+    echo -e "\t-r=MAX_PPM, --max-fee-rate=MAX_PPM\n\t\t(Default: $MAX_PPM) Changes max fees useful only if passed before 'list' or 'rebalance'\n"
     echo -e "\t-t=TOLERANCE, --tolerance=TOLERANCE\n\t\t(Default: 0.95) Changes tolerance useful only if passed before 'rebalance'\n"
+    echo -e "\t-n=THREADS, --number-of-threads=THREADS\n\t\t(Default: $THREADS) maximum number of threads used for the multi-threaded functionality\n"
     echo -e "list:\n\tShows a list of all channels in compacted mode using 'rebalance.py -c -l'"
     echo -e "\tfor example to: '$FILENAME --tolerance=0.99 list'\n"
     echo -e "rebalance:\n\tTries to rebalance unbalanced channels with default max fee of 10 and tolerance 0.95"
