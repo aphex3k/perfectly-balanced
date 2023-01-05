@@ -116,6 +116,7 @@ channels() {
 
 UNBALANCED=()
 IGNORE=()
+SHUFFLED=()
 
 headers() {
   echo -e "${Bo}Balance Graph  | Channel ID         | Oubound Cap | Inbound Cap | Channel Alias${W}"
@@ -197,7 +198,7 @@ rebalance () {
     channels | grep --color=always $c
   done
   echo
-  for v in ${UNBALANCED[@]}; do
+  for v in $(shuf -e "${UNBALANCED[@]}"); do
     amount=`reb -l --show-only $v | grep "Rebalance amount:" | awk '{ printf $3 }' | sed 's/,//g'`
     if [[  `bc -l <<< "$amount < 0"` -eq 1 ]]; then
       reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
@@ -207,7 +208,6 @@ rebalance () {
   done
   echo -e "\nRebalance completed!\nPlease use '$FILENAME list' to see your perfectly rebalanced list :)\n"
 }
-
 
 for i in "$@"; do
   case "$i" in
