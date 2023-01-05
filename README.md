@@ -2,8 +2,9 @@
 
 ![image](https://user-images.githubusercontent.com/88283485/130841235-3e8901c5-3477-4107-b15f-f284a06a9665.png)
 
-Script to make your LND node pefectly balanced as all things should be.
+Script to attempt and make your LND node pefectly balanced as all things should be. (without throwing all economic considerations out of the window)
 Inspired by [Igniter](https://github.com/RooSoft/igniter), [rebalance-lnd](https://github.com/C-Otto/rebalance-lnd) and [Balance Of Satoshi](https://github.com/alexbosworth/balanceofsatoshis)
+Based on (abandoned?) [perfectly-balanced](https://github.com/cuaritas/perfectly-balanced)
 
 ## Requirements:
 
@@ -23,7 +24,7 @@ Make sure your LND path is located or linked to `$HOME/.lnd`
 Not need to edit anything, just run it! 🚀
 
 ```
-Usage: ./perfectlybalanced.sh {-v|-h|-m=VALUE|-t=VALUE|list|rebalance}
+Usage: ./perfectlybalanced.sh {-v|-h|-r=MAX_PPM|-t=TOLERANCE|-n=THREADS|list|rebalance}
 
 Optional:
         -v, --version
@@ -36,11 +37,14 @@ Optional:
                 Ignores a specific channel id useful only if passed before 'list' or 'rebalance'
                 It can be used many times and should match a number of 18 digits
 
-        -m=MAX_FEE, --max-fee=MAX_FEE
-                (Default: 50) Changes max fees useful only if passed before 'list' or 'rebalance'
+        -r=MAX_PPM, --max-fee-rate=MAX_PPM
+                (Default: 10) Changes max fee rate useful only if passed before 'list' or 'rebalance'
 
         -t=TOLERANCE, --tolerance=TOLERANCE
                 (Default: 0.95) Changes tolerance useful only if passed before 'rebalance'
+
+        -n=THREADS, --number-of-threads=THREADS
+                (Default: 8) maximum number of threads used for the multi-threaded functionality
 
 list:
         Shows a list of all channels in compacted mode using 'rebalance.py -c -l'
@@ -67,11 +71,11 @@ Default list within tolerance 0.95:
 
 Unbalanced channels being rebalanced max fee 10 sats and tolerance 0.97:
 
-`./perfectlybalanced.sh --max-fee=10 --tolerance=0.97 rebalance`
+`./perfectlybalanced.sh --max-fee-rate=10 --tolerance=0.97 rebalance`
 
 or
 
-`./perfectlybalanced.sh -m=10 -t=0.97 rebalance`
+`./perfectlybalanced.sh -r=10 -t=0.97 rebalance`
 
 
 Default max fee 50 sats and tolerance 0.95:
@@ -80,12 +84,12 @@ Default max fee 50 sats and tolerance 0.95:
 
 Rebalance with max fee 10 sats and tolerance 0.98, ignoring channel id '761128128258703361':
 
-`./perfectlybalanced.sh --ignore=761128128258703361 -t=0.98 -m=10 rebalance`
+`./perfectlybalanced.sh --ignore=761128128258703361 -t=0.98 -r=10 rebalance`
 
 ![image](https://user-images.githubusercontent.com/88283485/131256805-edf995b9-3307-4e10-900c-e9d92a7908b1.png)
 
 ## Contribute
 
-Feel free to collaborate with code or donate a few Satoshi using your LND node ⚡ 😄
+Feel free to collaborate with code or donate a few Satoshi ⚡ 😄
 
-`lncli sendpayment --keysend 03e7299ced214b19b87ed87979462d9aee3ec07a42fe6e2211854bfa4cb32b0bb8 100 # sats`
+[LNURL1DP68GUP69UHK6CT4VD4K26N9D4EX7M3JXEKHSEMDXA4NVENDDENHSER5XEUKYME5VVMHWVMTX4UXGUMVD35H5VNWV4KHJUMVWD5KGTN0DE5K7M30D3H82UNVWQHKZURF9AMRZTMVDE6HYMP0XULPLCCR](http://mauckejemron26mxgm7k6fmngxdt6ybo4c7w3k5xdslliz2nemyslsid.onion/lnurlp/7)
