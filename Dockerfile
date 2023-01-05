@@ -7,7 +7,7 @@ RUN chmod a+x /perfectly-balanced/perfectlybalanced.sh \
 
 RUN apk add --update --no-cache bash bc
 
-VOLUME [ "/root/.lnd" ]
+VOLUME [ "/root/.lnd", "/tmp" ]
 WORKDIR /perfectly-balanced
 
 ENTRYPOINT ["/perfectly-balanced/perfectlybalanced.sh"]
