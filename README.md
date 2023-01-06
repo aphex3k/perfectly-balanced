@@ -2,22 +2,21 @@
 
 ![image](https://user-images.githubusercontent.com/88283485/130841235-3e8901c5-3477-4107-b15f-f284a06a9665.png)
 
-Script to attempt and make your LND node pefectly balanced as all things should be. (without throwing all economic considerations out of the window)
-Inspired by [Igniter](https://github.com/RooSoft/igniter), [rebalance-lnd](https://github.com/C-Otto/rebalance-lnd) and [Balance Of Satoshi](https://github.com/alexbosworth/balanceofsatoshis)
-Based on (abandoned?) [perfectly-balanced](https://github.com/cuaritas/perfectly-balanced)
+Script to attempt and make your LND node pefectly balanced as all things should be. (but without throwing all economic considerations out of the window)
+
+- Inspired by [Igniter](https://github.com/RooSoft/igniter), [rebalance-lnd](https://github.com/C-Otto/rebalance-lnd) and [Balance Of Satoshi](https://github.com/alexbosworth/balanceofsatoshis)
+- Based on (abandoned?) [perfectly-balanced](https://github.com/cuaritas/perfectly-balanced)
 
 ## Requirements:
 
-Almost all included by default in most linux distros:
+Almost all requirements are included by default in most linux distros. If you can run rebalance-lnd already, you might only be missing `bc`. Alternatively you can run this script inside `docker` and don't need to worry about further dependencies.
 
-- `bash`
-- `python3`
-- `pip`
-- `bc`
-- `wget`
-- `unzip`
+- `bash`, `python3`, and `pip` are required to run rebalance-lnd
+- `bc`, `wget`, and `unzip` are required additionally to run this script
+- `docker` is only required for the docker variant
 
-Make sure your LND path is located or linked to `$HOME/.lnd`
+1. Make sure your LND path is located or linked to `$HOME/.lnd`.
+1. Optionally ensure that your `/tmp` directory/volume is available for writing
 
 ## Usage
 
@@ -45,6 +44,9 @@ Optional:
 
         -n=THREADS, --number-of-threads=THREADS
                 (Default: 8) maximum number of threads used for the multi-threaded functionality
+
+        --reckless
+                (Default: disabled) Explicitly enables reckless mode, useful only if passed before 'rebalance'
 
 list:
         Shows a list of all channels in compacted mode using 'rebalance.py -c -l'

@@ -10,12 +10,13 @@ renice -n 19 $$
 # This script tries to get your channels perfectly balanced by using `rebalance.py`
 # See https://github.com/C-Otto/rebalance-lnd for more info
 
-VERSION="0.0.12"
+VERSION="0.0.13"
 
 FILENAME=$0
 
 MAX_PPM=10 # Sats
 THREADS=8
+RECKLESS=""
 
 TOLERANCE=0.95 # 95%
 
@@ -59,6 +60,28 @@ ${W}
 ${W}
 PERFECT
 )"
+
+# https://stackoverflow.com/a/45181694/1117968
+portable_nproc() {
+    
+    local NPROCS=THREADS
+
+    OS="$(uname -s)"
+    if [ "$OS" = "Linux" ]; then
+        NPROCS="$(nproc --all)"
+    elif [ "$OS" = "Darwin" ] || \
+         [ "$(echo "$OS" | grep -q BSD)" = "BSD" ]; then
+        NPROCS="$(sysctl -n hw.ncpu)"
+    else
+        NPROCS="$(getconf _NPROCESSORS_ONLN)"  # glibc/coreutils fallback
+    fi
+
+    echo "Found $NPROCS cpu cores"
+
+    THREADS=$NPROCS
+}
+
+portable_nproc
 
 setup() {
 
@@ -194,6 +217,18 @@ list () {
   fi
 }
 
+rebalance_channel () {  
+  # this step will take a significant amount of time (~1sec+)
+    amount=`reb -l --show-only $1 | grep "Rebalance amount:" | awk '{ printf $3 }' | sed 's/,//g'`
+    if [[  `bc -l <<< "$amount < 0"` -eq 1 ]]; then
+      reb -f $1 --amount ${amount#-} ${RECKLESS} --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
+    elif [[ `bc -l <<< "$amount > 0"` -eq 1 ]]; then
+      reb -t $1 --amount $amount ${RECKLESS} --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0
+    fi
+}
+
+export -f rebalance_channel
+
 rebalance () {
   echo -e "Trying to rebalance these ${#UNBALANCED[@]} unbalanced channels, max fee rate $MAX_PPM ppm:\n"
   export GREP_COLORS='ms=01;31'
@@ -204,22 +239,16 @@ rebalance () {
   done
   echo
 
-  local COMMANDS=()
+  export -f reb
+  export reb
+  export RECKLESS
+  export MAX_PPM
+  export REBALANCE_LND_FILEPATH
+  export LND_IP
+  export LND_GRPC_PORT
+  export LND_DIR
 
-  for v in ${UNBALANCED[@]}; do 
-    # this step will take a significant amount of time (~1sec+)
-    amount=`reb -l --show-only $v | grep "Rebalance amount:" | awk '{ printf $3 }' | sed 's/,//g'`
-    if [[  `bc -l <<< "$amount < 0"` -eq 1 ]]; then
-      echo -n "<"
-      COMMANDS+=("python3 $reb -f $v --amount ${amount#-} --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0")
-    elif [[ `bc -l <<< "$amount > 0"` -eq 1 ]]; then
-      echo -n ">"
-      COMMANDS+=("python3 $reb -t $v --amount $amount --reckless --min-local 0 --min-amount 0 --fee-ppm-limit $MAX_PPM --min-remote 0")
-    fi
-  done
-  echo
-
-  shuf -e "${COMMANDS[@]}" | xargs -P ${THREADS:-8} -I a sh -c a
+  shuf -e "${UNBALANCED[@]}" | xargs -P ${THREADS} -I {} bash -c 'rebalance_channel "$@"' _ {}
 
   echo -e "\nRebalance completed!\nPlease use '$FILENAME list' to see your perfectly rebalanced list :)\n"
 }
@@ -250,6 +279,10 @@ for i in "$@"; do
     fi
     shift
     ;;
+  --reckless)
+    RECKLESS="--reckless"
+    shift
+    ;;
   -t=*|--tolerance=*)
     TOLERANCE="${i#*=}"
     if ! [[ "$TOLERANCE" =~ ^0.[0-9]+$ ]]; then
@@ -275,6 +308,7 @@ for i in "$@"; do
     echo -e "\t\tIt can be used many times and should match a number of 18 digits\n"
     echo -e "\t-r=MAX_PPM, --max-fee-rate=MAX_PPM\n\t\t(Default: $MAX_PPM) Changes max fees useful only if passed before 'list' or 'rebalance'\n"
     echo -e "\t-t=TOLERANCE, --tolerance=TOLERANCE\n\t\t(Default: 0.95) Changes tolerance useful only if passed before 'rebalance'\n"
+    echo -e "\t--reckless\n\t\t(Default: disabled) Explicitly enables reckless mode, useful only if passed before 'rebalance'\n"
     echo -e "\t-n=THREADS, --number-of-threads=THREADS\n\t\t(Default: $THREADS) maximum number of threads used for the multi-threaded functionality\n"
     echo -e "list:\n\tShows a list of all channels in compacted mode using 'rebalance.py -c -l'"
     echo -e "\tfor example to: '$FILENAME --tolerance=0.99 list'\n"
