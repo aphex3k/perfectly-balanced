@@ -1,0 +1,20 @@
+- name: Delete untagged ghcr
+  # You may pin to the exact commit or the version.
+  # uses: Chizkiyahu/delete-untagged-ghcr-action@afe8e6f1a6a7303ab6d26efaddea5ee712e10e39
+  uses: Chizkiyahu/delete-untagged-ghcr-action@v2.0.0
+  with:
+    # Personal access token (PAT) used to fetch the repository. The PAT is configured with the local git config, which enables your scripts to run authenticated git commands. The post-job step removes the PAT. needs delete:packages permissions
+
+    token: 
+    # The repository owner name
+    repository_owner: # default is ${{ github.repository_owner }}
+    # Delete only from repository name
+    repository: # optional
+    # Delete only from package name
+    package_name: # optional
+    # Delete only package versions without tag
+    untagged_only: # optional, default is true
+    # Except untagged multiplatform packages from deletion (only for --untagged_only)
+    except_untagged_multiplatform: # optional
+    # Owner type (org or user)
+    owner_type: 
