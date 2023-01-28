@@ -2,7 +2,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-links:
+  Delete_untagged_containers:
     runs-on: "ubuntu-latest"
     steps:
       - name: Delete untagged ghcr
